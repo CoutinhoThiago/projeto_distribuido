@@ -12,9 +12,9 @@ class Processo:
         self.id = id_processo
         self.config_grupo = config_grupo
         self.relogio_lamport = 0
-        self.entregues = set()  # Conjunto de mensagens já entregues
+        self.entregues = set()
         self.contador_sequencia = 0
-        self.sockets = {}  # sockets de comunicação
+        self.sockets = {}
         self.executando = True
         self.modo_auto = modo_auto
         
@@ -27,7 +27,7 @@ class Processo:
         
         # Iniciar thread do servidor
         threading.Thread(target=self.aceitar_conexoes, daemon=True).start()
-        time.sleep(2)  # Esperar outros processos iniciarem
+        time.sleep(2)
         
         # Conectar aos outros processos
         for pid, (host, porta) in config_grupo.items():
@@ -72,7 +72,6 @@ class Processo:
                 break
 
     def processar_mensagem(self, msg):
-        # Atualizar relógio de Lamport
         self.relogio_lamport = max(self.relogio_lamport, msg['timestamp']) + 1
         chave_msg = (msg['remetente'], msg['seq'])
         
@@ -80,7 +79,7 @@ class Processo:
             self.entregues.add(chave_msg)
             self.log_evento(f"Entregue: {msg['dados']} | De={msg['remetente']}", self.relogio_lamport)
             
-            # Retransmitir para outros (exceto remetente)
+            # Retransmitir para outros
             for pid in self.sockets:
                 if pid != msg['remetente']:
                     self.enviar_mensagem(pid, msg)
@@ -94,11 +93,9 @@ class Processo:
             'dados': dados,
             'timestamp': self.relogio_lamport
         }
-        # Auto-entrega
         self.entregues.add((self.id, self.contador_sequencia))
         self.log_evento(f"Enviado: {dados}", self.relogio_lamport)
         
-        # Enviar para todos
         for pid in self.sockets:
             self.enviar_mensagem(pid, msg)
 
@@ -107,11 +104,10 @@ class Processo:
             msg_str = json.dumps(msg)
             self.sockets[pid].sendall(msg_str.encode())
         except:
-            pass  # Tratar desconexões silenciosamente
+            pass
 
     def enviar_automatico(self):
-        """Envia mensagens automaticamente em intervalos aleatórios"""
-        time.sleep(3)  # Esperar todos conectarem
+        time.sleep(3)
         
         mensagens = [
             "Olá a todos!",
@@ -127,7 +123,6 @@ class Processo:
             time.sleep(intervalo)
             self.multicast_confiavel(texto)
         
-        # Esperar entregas finais
         time.sleep(5)
         self.executando = False
         print(f"[{self.id}] Modo automático concluído. Pressione Ctrl+C para sair.")
@@ -153,14 +148,13 @@ class Processo:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Processo Distribuído com Multicast Confiável')
     parser.add_argument('--id', required=True, help='ID do Processo (ex: P1)')
-    parser.add_argument('--grupo', required=True, help='Arquivo JSON de configuração do grupo')
+    parser.add_argument('--group', '--grupo', required=True, dest='grupo', help='Arquivo JSON de configuração do grupo')
     parser.add_argument('--auto', action='store_true', help='Ativar modo automático')
     args = parser.parse_args()
 
     with open(args.grupo, 'r') as f:
         config_grupo_raw = json.load(f)
     
-    # Analisar endereços
     config_grupo = {}
     for pid, endereco in config_grupo_raw.items():
         host, porta = endereco.split(':')
@@ -168,7 +162,6 @@ if __name__ == "__main__":
     
     processo = Processo(args.id, config_grupo, args.auto)
     
-    # Manter thread principal ativa
     try:
         while processo.executando:
             time.sleep(0.5)

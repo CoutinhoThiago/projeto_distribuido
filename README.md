@@ -29,7 +29,7 @@ python process.py --id P1 --group config.json --auto
 python process.py --id P2 --group config.json --auto
 
 # Terminal 3:
-python process.py --id P3 --group config.json --auto
+python process.py --id P3 --grupo config.json --auto
 ```
 
 ### 4. Modo Manual (interativo)
